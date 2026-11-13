@@ -56,17 +56,24 @@ function shape(e, colour, opts = {}) {
 
 // A heart (implicit curve, divided by its gradient to approximate a distance).
 function heart(cx, cy, size) {
-  const f = (x, y) => {
-    const u = (x - cx) / size, v = -(y - cy) / size;
-    const a = u * u + v * v - 1;
-    return a * a * a - u * u * v * v * v;
-  };
+  // exact distance to a heart whose tip is at (0, 0) and top near y = 1 (y up)
+  const d2 = (a, b) => a * a + b * b;
   const sdf = (x, y) => {
-    const e = 0.75;
-    const gx = (f(x + e, y) - f(x - e, y)) / (2 * e), gy = (f(x, y + e) - f(x, y - e)) / (2 * e);
-    return f(x, y) / (Math.hypot(gx, gy) + 1e-9);
+    const u = Math.abs((x - cx) / size), v = (cy - y) / size + 0.5;
+    if (v + u > 1) return (Math.sqrt(d2(u - 0.25, v - 0.75)) - Math.SQRT2 / 4) * size;
+    const m = 0.5 * Math.max(u + v, 0);
+    const d = Math.sqrt(Math.min(d2(u, v - 1), d2(u - m, v - m)));
+    return d * (u - v >= 0 ? 1 : -1) * size;
   };
-  return { sdf, box: [cx - size * 1.3, cy - size * 1.3, cx + size * 1.3, cy + size * 1.3] };
+  return { sdf, box: [cx - size * 0.75, cy - size * 0.75, cx + size * 0.75, cy + size * 0.7] };
+}
+
+// A four-point sparkle: two thin crossed ellipses plus a soft glow.
+function sparkle(cx, cy, r, colour, alpha = 1) {
+  shape(ellipse(cx, cy, r * 1.8, r * 1.8), colour, { alpha: alpha * 0.18 });
+  shape(ellipse(cx, cy, r, r * 0.2), colour, { alpha });
+  shape(ellipse(cx, cy, r * 0.2, r), colour, { alpha });
+  shape(ellipse(cx, cy, r * 0.5, r * 0.5), [255, 255, 255], { alpha });
 }
 
 // A ring segment (for the smile): circle of radius r, kept where keep(x, y) is true.
@@ -133,11 +140,12 @@ shape(ellipse(512, 570, 345, 300), fur, { outline: lineC, ow: 5 });
 shape(ellipse(430, 440, 180, 110, -0.4), furSoft, { alpha: 0.7 });
 
 // eyes: big, glossy, with two sparkles each
-for (const ex of [392, 632]) {
-  shape(ellipse(ex, 598, 68, 84), (x, y) => lerpC(hex('#5B3A4A'), hex('#2A1621'), clamp((y - 520) / 160)));
-  shape(ellipse(ex, 625, 48, 48), hex('#8A5A70'), { alpha: 0.65 });
-  shape(ellipse(ex - 22, 570, 26, 29), [255, 255, 255]);
-  shape(ellipse(ex + 24, 640, 12, 12), [255, 255, 255], { alpha: 0.95 });
+for (const ex of [388, 636]) {
+  shape(ellipse(ex, 600, 78, 94), (x, y) => lerpC(hex('#6A4256'), hex('#26121E'), clamp((y - 505) / 190)));
+  shape(ellipse(ex, 640, 60, 52), (x, y) => lerpC(hex('#A56A86'), hex('#6A3E57'), clamp((y - 590) / 100)), { alpha: 0.75 });
+  shape(ellipse(ex - 26, 566, 30, 34), [255, 255, 255]);
+  shape(ellipse(ex + 28, 650, 14, 14), [255, 255, 255], { alpha: 0.95 });
+  shape(ellipse(ex + 8, 668, 7, 7), [255, 255, 255], { alpha: 0.8 });
 }
 
 // rosy cheeks
@@ -164,8 +172,21 @@ shape(ellipse(360, 392, 27, 25), hex('#FF8FB5'), { outline: hex('#E04F80'), ow: 
 shape(ellipse(351, 384, 8, 6), [255, 255, 255], { alpha: 0.7 });
 
 // the bunny hugs a big red heart, held by two round paws
-shape(heart(512, 842, 86), (x, y) => lerpC(hex('#FF6B8B'), hex('#E0325F'), clamp((y - 760) / 170)), { outline: hex('#C2234E'), ow: 5 });
-shape(ellipse(478, 814, 22, 13, -0.6), [255, 255, 255], { alpha: 0.6 });
+shape(heart(512, 842, 190), (x, y) => lerpC(hex('#FF6B8B'), hex('#E0325F'), clamp((y - 760) / 170)), { outline: hex('#C2234E'), ow: 5 });
+shape(ellipse(470, 808, 26, 14, -0.6), [255, 255, 255], { alpha: 0.65 });
+shape(ellipse(448, 822, 7, 7), [255, 255, 255], { alpha: 0.6 });
+
+// a little flower on the floppy ear, and sparkles around the picture
+const petal = hex('#FFF08A');
+for (let k = 0; k < 5; k++) {
+  const a = (k / 5) * Math.PI * 2 - 0.5;
+  shape(ellipse(690 + Math.cos(a) * 26, 322 + Math.sin(a) * 26, 18, 18), petal, { outline: hex('#F2C94C'), ow: 3 });
+}
+shape(ellipse(690, 322, 14, 14), hex('#FF9F4A'), { outline: hex('#E07F2C'), ow: 3 });
+sparkle(150, 470, 34, hex('#FFD166'));
+sparkle(880, 520, 28, hex('#FFD166'), 0.95);
+sparkle(840, 150, 24, hex('#A9D8FF'), 0.9);
+sparkle(160, 780, 22, hex('#D9C4FF'), 0.9);
 for (const pxc of [398, 626]) {
   shape(ellipse(pxc, 862, 62, 50), fur, { outline: lineC, ow: 5 });
   shape(ellipse(pxc - 18, 876, 10, 8), pinkIn, { alpha: 0.8 });
